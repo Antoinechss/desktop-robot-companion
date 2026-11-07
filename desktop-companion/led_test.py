@@ -3,7 +3,7 @@ import time
 
 led = Pin(25, Pin.OUT)
 
-while True:          # un microcontrôleur ne s'arrête jamais : boucle infinie
+while True:          
     led.on()
     time.sleep(1)
     led.off()
