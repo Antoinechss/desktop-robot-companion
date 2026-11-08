@@ -1,5 +1,4 @@
 """First test at displaying an image on the OLED screen through the Pico controller"""
-
 from machine import Pin, SPI
 import st7789py as st7789
 
