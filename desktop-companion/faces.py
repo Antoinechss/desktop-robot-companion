@@ -1,6 +1,7 @@
 from machine import Pin, SPI
 import st7789py as st7789
 import time, random
+from time import ticks_diff
 
 # Link to hardware
 spi = SPI(0, baudrate=31_250_000, sck=Pin(18), mosi=Pin(19))
@@ -45,7 +46,7 @@ EMOTIONS = {
     "neutral_r": {
         "eye_l": [(95, 60, 45, 70)],
         "eye_r": [(170, 60, 45, 70)],
-        "mouth": [(85, 170, 70, 10)],
+        "mouth": [(100, 170, 70, 10)],
         "face_color": st7789.WHITE,
         "duration": 2, 
         "background_color": st7789.BLACK,
@@ -157,6 +158,18 @@ def render_emotion(emotion: str, tft):
         for r in emo['add_on']['coords']: 
             tft.fill_rect(*r, emo['add_on']['color']) 
 
+# ----- MAIN LOOP ----- 
+
+"""
+Random gazes between left, right, blink from a neutral face. 
+Sleeps after a given time of inactivity. 
+"""
+
+SLEEP_AFTER = 30000 # 30s
+
+last_activity = time.time()
+asleep = False
+
 while True: 
 
     now = time.time()
@@ -165,6 +178,11 @@ while True:
     next_gaze = random.choice(['neutral_l', 'neutral_r', 'blink'])
     render_emotion(next_gaze, tft)
     time.sleep(EMOTIONS[next_gaze]['duration'])
-    
+
+    if ticks_diff(now, last_activity) > SLEEP_AFTER: 
+        while True: 
+            render_emotion('sleeping', tft)
+            time.sleep(10)
+
 
 
