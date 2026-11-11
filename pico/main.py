@@ -2,24 +2,45 @@ import sys, select, time, random
 from machine import PWM, Pin, SPI
 import st7789py as st7789
 from faces import EMOTIONS, compute_face, draw_face
+from config import (
+    SPI_BAUD,
+    SPI_SCK,
+    SPI_MOSI,
+    TFT_SIZE,
+    TFT_RST,
+    TFT_DC,
+    TFT_CS,
+    PAN_PIN,
+    SERVO_FREQ,
+    BLINK_DURATION,
+    BLINK_MIN,
+    BLINK_MAX,
+    IDLE_AFTER,
+    SLEEP_AFTER,
+    GAZE_RANGE,
+    GAZE_MIN,
+    GAZE_MAX,
+    CENTER_ANGLE,
+    HALF_FOV,
+)
 
 # Clock on GP18, Data on GP19
 # baudrate = speed : 31M bits/secs
-spi = SPI(0, baudrate=31_250_000, sck=Pin(18), mosi=Pin(19))
+spi = SPI(0, baudrate=SPI_BAUD, sck=Pin(SPI_SCK), mosi=Pin(SPI_MOSI))
 
 # --- Screen & bus setup, size and pluggins
 tft = st7789.ST7789(  # Screen
     spi,
-    240,
-    240,  # Size
-    reset=Pin(20, Pin.OUT),  # RT control endpoint
-    cs=Pin(17, Pin.OUT),  # TC control endpoint
-    dc=Pin(16, Pin.OUT),  # DC control endpoint
+    TFT_SIZE,
+    TFT_SIZE,  # Size
+    reset=Pin(TFT_RST, Pin.OUT),  # RT control endpoint
+    cs=Pin(TFT_CS, Pin.OUT),  # TC control endpoint
+    dc=Pin(TFT_DC, Pin.OUT),  # DC control endpoint
 )
 
 # --- Servo setup
-servo = PWM(Pin(14))
-servo.freq(50)
+servo = PWM(Pin(PAN_PIN))
+servo.freq(SERVO_FREQ)
 
 
 def set_angle(angle):
@@ -51,7 +72,7 @@ def parse_order(line):
         try:
             cx_scaled = float(line_items[1])  # Read the scaled detection x
             cx_scaled = max(-1, min(1, cx_scaled))  # clamp between [-1, 1]
-            servo_angle = 33 * cx_scaled + 90
+            servo_angle = HALF_FOV * cx_scaled + CENTER_ANGLE
             return ("look", servo_angle)
         except (ValueError, IndexError):
             return None
@@ -66,29 +87,31 @@ def parse_order(line):
             return None
 
 
-# --- Emotion neutral start
+def redraw(old_rects):
+    new_rects = compute_face(emotion, gaze_dx, blinking)
+    return draw_face(tft, old_rects, new_rects, EMOTIONS[emotion]["background_color"])
+
+
+# ---- Main loop ----
+
+now = time.ticks_ms()
+mode = "idle"
+idle_since = now
+last_look = time.ticks_add(now, -10000)
+gaze_dx = 0
+next_gaze = now
 emotion = "neutral"
-old_rects = []
-tft.fill(st7789.BLACK)
-new_rects = compute_face(emotion, 0, False)
-old_rects = draw_face(tft, old_rects, new_rects, EMOTIONS[emotion]['background_color'])
 blinking = False
-next_event = time.ticks_ms()
+next_event = time.ticks_add(now, 3000)
+
+tft.fill(st7789.BLACK)
+old_rects = redraw([])  # First draw
+
 
 while True:
     now = time.ticks_ms()
 
-    # --- Blink management
-    if time.ticks_diff(now, next_event) >= 0 and emotion != "sleeping": 
-        if not blinking: # Eyes open --> make them blink 
-            blinking = True
-            next_event = time.ticks_add(now, 150)
-        else:  # Blinking --> make it reopen and set next random event
-            blinking = False 
-            next_event = time.ticks_add(now, random.randint(2000, 6000)) # random time in 2-6 seconds 
-        new_rects = compute_face(emotion, 0, blinking)
-        old_rects = draw_face(tft, old_rects, new_rects, EMOTIONS[emotion]['background_color']) 
-
+    # --- Read serial port
     if poll.poll(0):
         line = sys.stdin.readline()
         order = parse_order(line)
@@ -96,9 +119,50 @@ while True:
             cmd, value = order
             if cmd == "look":
                 set_angle(value)
+                last_look = now
+                if mode == "sleeping":
+                    emotion = "neutral"
+                mode = "tracking"
+                gaze_dx = 0
+                old_rects = redraw(old_rects)
+
             elif cmd == "emo":
                 blinking = False
                 emotion = str(value)
-                new_rects = compute_face(emotion, 0, blinking)
-                old_rects = draw_face(tft, old_rects, new_rects, EMOTIONS[emotion]['background_color'])
+                old_rects = redraw(old_rects)
+                if mode == "sleeping": 
+                    mode = "idle"
+                    idle_since = now
+                    
+    # --- Tracking -> Idle
+    if mode == "tracking" and time.ticks_diff(now, last_look) >= IDLE_AFTER:
+        mode = "idle"
+        idle_since = now
+        next_gaze = now
+
+    # --- Idle -> Sleeping | Glance
+    if mode == "idle":
+        if time.ticks_diff(now, idle_since) >= SLEEP_AFTER:
+            mode = "sleeping"
+            emotion = "sleeping"
+            gaze_dx = 0
+            blinking = False
+            old_rects = redraw(old_rects)
+        elif time.ticks_diff(now, next_gaze) >= 0:
+            gaze_dx = random.randint(-GAZE_RANGE, GAZE_RANGE)
+            next_gaze = time.ticks_add(now, random.randint(GAZE_MIN, GAZE_MAX))
+            old_rects = redraw(old_rects)
+
+    # --- Blink management
+    if time.ticks_diff(now, next_event) >= 0 and mode != "sleeping":
+        if not blinking:  # Eyes open --> make them blink
+            blinking = True
+            next_event = time.ticks_add(now, BLINK_DURATION)
+        else:  # Blinking --> make it reopen and set next random event
+            blinking = False
+            next_event = time.ticks_add(
+                now, random.randint(BLINK_MIN, BLINK_MAX)
+            )  # random time in 2-6 seconds
+        old_rects = redraw(old_rects)
+
     time.sleep(0.01)
