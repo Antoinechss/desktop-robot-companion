@@ -4,12 +4,7 @@ from functools import lru_cache
 from picamera2 import Picamera2
 from picamera2.devices import IMX500
 from picamera2.devices.imx500 import NetworkIntrinsics
-
-
-# --- Camera & Model Parameters
-MODEL = "/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
-CONFIDENCE_THRESHOLD = 0.5
-PERSON_CLASS = 0
+from config import MODEL, CONFIDENCE_THRESHOLD, PERSON_CLASS
 
 
 class Detection:

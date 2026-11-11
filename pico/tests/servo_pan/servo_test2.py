@@ -1,9 +1,8 @@
 # Testing serial port --> pi --> pico --> servo linkeage
 import serial, time
+from config import SERIAL_LINK, SPEED
 
 # Connecting to the pi's serial port 
-SERIAL_LINK = "/dev/ttyACM0"
-SPEED = 115200
 ser = serial.Serial(SERIAL_LINK, SPEED, timeout=1)
 
 # Test loop of orders
