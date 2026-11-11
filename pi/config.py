@@ -8,7 +8,7 @@ SERIAL_LINK = "/dev/ttyACM0"
 SPEED = 115200
 
 # --- Tracking Behaviour
-ALPHA = 0.4          # EMA smoothing
-DEAD_ZONE = 0.02     # min change in center_x before sending a new command
-MIN_INTERVAL = 0.1   # min seconds between two commands to the Pico
-LOST_TIMEOUT = 3.0   # seconds without anyone before the head returns to center
+ALPHA = 0.4  # EMA smoothing
+DEAD_ZONE = 0.02  # min change in center_x before sending a new command
+MIN_INTERVAL = 0.1  # min seconds between two commands to the Pico
+LOST_TIMEOUT = 3.0  # seconds without anyone before the head returns to center

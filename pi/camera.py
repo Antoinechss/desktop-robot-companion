@@ -3,7 +3,8 @@ from picamera2.devices import IMX500
 from picamera2.devices.imx500 import NetworkIntrinsics
 from picamera2 import Picamera2
 
-def setup_camera(): 
+
+def setup_camera():
     imx500 = IMX500(MODEL)
     intrinsics = imx500.network_intrinsics
     if not intrinsics:
@@ -11,17 +12,18 @@ def setup_camera():
         intrinsics.task = "object detection"
     elif intrinsics.task != "object detection":
         raise ValueError("Network is not an object detection task")
-        
+
     intrinsics.update_with_defaults()
 
     picam2 = Picamera2(imx500.camera_num)
-    cam_config = picam2.create_preview_configuration(controls={"FrameRate": intrinsics.inference_rate}, buffer_count=12)
+    cam_config = picam2.create_preview_configuration(
+        controls={"FrameRate": intrinsics.inference_rate}, buffer_count=12
+    )
     imx500.show_network_fw_progress_bar()
     picam2.start(cam_config, show_preview=False)
-    frame_w, frame_h = picam2.camera_configuration()["main"]["size"]  
+    frame_w, frame_h = picam2.camera_configuration()["main"]["size"]
 
     if intrinsics.preserve_aspect_ratio:
         imx500.set_auto_aspect_ratio()
 
     return imx500, picam2, intrinsics, frame_w, frame_h
-
