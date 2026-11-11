@@ -6,10 +6,11 @@ from picamera2.devices import IMX500
 from picamera2.devices.imx500 import NetworkIntrinsics
 
 
-# --- Model Parameters
+# --- Camera & Model Parameters
 MODEL = "/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
 CONFIDENCE_THRESHOLD = 0.5
 PERSON_CLASS = 0
+
 
 class Detection:
     def __init__(self, coords, category, conf, metadata):

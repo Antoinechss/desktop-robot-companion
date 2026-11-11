@@ -1,0 +1,3 @@
+.venv/
+*.uf2
+__pycache__/

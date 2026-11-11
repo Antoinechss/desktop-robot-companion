@@ -30,7 +30,7 @@ def parse_order(line):
         try: 
             cx_scaled = float(line_items[1]) # Read the scaled detection x 
             cx_scaled = max(-1, min(1, cx_scaled)) # clamp between [-1, 1]
-            servo_angle = 45 * cx_scaled + 90
+            servo_angle = 33 * cx_scaled + 90
             return ("look", servo_angle)
         except (ValueError, IndexError): 
             return None
