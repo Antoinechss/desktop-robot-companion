@@ -1,11 +1,11 @@
 from camera import setup_camera
 from pico_link import open_link, send
-from detection import parse_detections
+from detection import parse_detections, parse_poses
 import time
-from config import ALPHA, LOST_TIMEOUT, MIN_INTERVAL, DEAD_ZONE
+from config import ALPHA, LOST_TIMEOUT, MIN_INTERVAL, DEAD_ZONE, MODEL, POSE_MODEL
 
 # --- Setup
-imx500, picam2, intrinsics, frame_w, frame_h = setup_camera()
+imx500, picam2, intrinsics, frame_w, frame_h = setup_camera(POSE_MODEL, "pose estimation")
 ser = open_link()
 
 
@@ -21,14 +21,10 @@ centered = False
 try:
     while True:
         now = time.monotonic()
-        frame_detections = parse_detections(
-            picam2.capture_metadata(), imx500, picam2, intrinsics, frame_w, frame_h
-        )
+        faces = parse_poses(picam2.capture_metadata(), imx500)
         # Case A: ≥1 target detected
-        if frame_detections:
-            target = max(
-                frame_detections, key=lambda d: d.box[2] * d.box[3]
-            )  # pick biggest detected box by w*h
+        if faces:
+            target = max(faces, key=lambda f: f.score) # pick biggest score face
             centered = False
             last_seen_time = now
 

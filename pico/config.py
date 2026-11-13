@@ -13,13 +13,11 @@ TILT_PIN = 15
 SERVO_FREQ = 50
 HALF_FOV = 33       # camera horizontal half-angle
 HALF_VFOV = 26      # camera vertical half-angle
-
-# Pan (bigger angle = LEFT)
+# Pan
 PAN_CENTER = 115
 PAN_MIN = 50
 PAN_MAX = 155
-
-# Tilt (bigger angle = DOWN)
+# Tilt 
 TILT_CENTER = 45
 TILT_MIN = 10
 TILT_MAX = 100
@@ -33,6 +31,5 @@ GAZE_MAX = 4000
 IDLE_AFTER = 3000
 SLEEP_AFTER = 30000
 
-# Gaze 
+# --- Gaze 
 GAZE_RANGE = 25
-

@@ -1,17 +1,18 @@
-from config import MODEL
 from picamera2.devices import IMX500
 from picamera2.devices.imx500 import NetworkIntrinsics
 from picamera2 import Picamera2
 
 
-def setup_camera():
-    imx500 = IMX500(MODEL)
+def setup_camera(model, task="object detection"):
+    """Load a model on the IMX500 and start the camera.
+    task: "object detection" or "pose estimation"."""
+    imx500 = IMX500(model)
     intrinsics = imx500.network_intrinsics
     if not intrinsics:
         intrinsics = NetworkIntrinsics()
-        intrinsics.task = "object detection"
-    elif intrinsics.task != "object detection":
-        raise ValueError("Network is not an object detection task")
+        intrinsics.task = task
+    elif intrinsics.task != task:
+        raise ValueError(f"Network is not a {task} task")
 
     intrinsics.update_with_defaults()
 
