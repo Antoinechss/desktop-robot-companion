@@ -20,8 +20,15 @@ from config import (
     GAZE_RANGE,
     GAZE_MIN,
     GAZE_MAX,
-    CENTER_ANGLE,
     HALF_FOV,
+    TILT_PIN,
+    PAN_CENTER, 
+    PAN_MIN, 
+    PAN_MAX, 
+    TILT_CENTER, 
+    TILT_MIN, 
+    TILT_MAX, 
+    HALF_VFOV
 )
 
 # Clock on GP18, Data on GP19
@@ -39,12 +46,12 @@ tft = st7789.ST7789(  # Screen
 )
 
 # --- Servo setup
-servo = PWM(Pin(PAN_PIN))
-servo.freq(SERVO_FREQ)
+pan = PWM(Pin(PAN_PIN)); pan.freq(SERVO_FREQ)
+tilt = PWM(Pin(TILT_PIN)); tilt.freq(SERVO_FREQ)
 
 
-def set_angle(angle):
-    angle = max(0, min(180, angle))
+def set_angle(servo, angle, lo, hi):
+    angle = max(lo, min(hi, angle))
     pulse_width_ns = int(500000 + (angle / 180.0) * 2000000)
     servo.duty_ns(pulse_width_ns)
 
@@ -57,7 +64,7 @@ poll.register(sys.stdin, select.POLLIN)  # Data available for reading
 def parse_order(line):
     """
     Checks line format, parses content and orders
-    Converts cx_scaled position into angle for the servo
+    Converts cx_scaled cy_scaled position into angle for the servo
     Fetches emotion for face orders
     """
     line_items = line.strip().split()
@@ -72,8 +79,15 @@ def parse_order(line):
         try:
             cx_scaled = float(line_items[1])  # Read the scaled detection x
             cx_scaled = max(-1, min(1, cx_scaled))  # clamp between [-1, 1]
-            servo_angle = HALF_FOV * cx_scaled + CENTER_ANGLE
-            return ("look", servo_angle)
+            pan_angle = PAN_CENTER - HALF_FOV * cx_scaled 
+            if len(line_items) > 2:
+                cy_scaled = float(line_items[2])
+                cy_scaled = max(-1, min(1, cy_scaled))
+                tilt_angle = TILT_CENTER + HALF_VFOV * cy_scaled 
+            else: 
+                tilt_angle = None
+
+            return ("look", (pan_angle, tilt_angle))
         except (ValueError, IndexError):
             return None
 
@@ -107,6 +121,9 @@ next_event = time.ticks_add(now, 3000)
 tft.fill(st7789.BLACK)
 old_rects = redraw([])  # First draw
 
+# Initial centering
+set_angle(pan, PAN_CENTER, PAN_MIN, PAN_MAX)
+set_angle(tilt, TILT_CENTER, TILT_MIN, TILT_MAX)
 
 while True:
     now = time.ticks_ms()
@@ -118,7 +135,10 @@ while True:
         if order is not None:
             cmd, value = order
             if cmd == "look":
-                set_angle(value)
+                pan_angle, tilt_angle = value
+                set_angle(pan, pan_angle, PAN_MIN, PAN_MAX)
+                if tilt_angle is not None:
+                    set_angle(tilt, tilt_angle, TILT_MIN, TILT_MAX)
                 last_look = now
                 if mode == "sleeping":
                     emotion = "neutral"
@@ -133,7 +153,7 @@ while True:
                 if mode == "sleeping": 
                     mode = "idle"
                     idle_since = now
-                    
+
     # --- Tracking -> Idle
     if mode == "tracking" and time.ticks_diff(now, last_look) >= IDLE_AFTER:
         mode = "idle"

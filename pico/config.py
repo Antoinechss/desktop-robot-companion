@@ -7,12 +7,22 @@ TFT_DC = 16
 TFT_RST = 20
 TFT_SIZE = 240
 PAN_PIN = 14
+TILT_PIN = 15
 
-# --- Servo 
+# --- Servo
 SERVO_FREQ = 50
-CENTER_ANGLE = 90
-HALF_FOV = 33
-CENTER_ANGLE = 90
+HALF_FOV = 33       # camera horizontal half-angle
+HALF_VFOV = 26      # camera vertical half-angle
+
+# Pan (bigger angle = LEFT)
+PAN_CENTER = 115
+PAN_MIN = 50
+PAN_MAX = 155
+
+# Tilt (bigger angle = DOWN)
+TILT_CENTER = 45
+TILT_MIN = 10
+TILT_MAX = 100
 
 # --- Timings 
 BLINK_DURATION = 150
@@ -25,3 +35,4 @@ SLEEP_AFTER = 30000
 
 # Gaze 
 GAZE_RANGE = 25
+
