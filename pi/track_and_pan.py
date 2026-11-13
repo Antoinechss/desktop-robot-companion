@@ -8,6 +8,7 @@ from config import ALPHA, LOST_TIMEOUT, MIN_INTERVAL, DEAD_ZONE
 imx500, picam2, intrinsics, frame_w, frame_h = setup_camera()
 ser = open_link()
 
+
 # --- State variables
 smooth_x = None
 smooth_y = None
