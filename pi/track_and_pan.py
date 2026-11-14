@@ -1,8 +1,8 @@
 from camera import setup_camera
 from pico_link import open_link, send
-from detection import parse_detections, parse_poses
+from detection import parse_poses
 import time
-from config import ALPHA, LOST_TIMEOUT, MIN_INTERVAL, DEAD_ZONE, MODEL, POSE_MODEL
+from config import LOST_TIMEOUT, MIN_INTERVAL, DEAD_ZONE, POSE_MODEL, K
 
 # --- Setup
 imx500, picam2, intrinsics, frame_w, frame_h = setup_camera(POSE_MODEL, "pose estimation")
@@ -10,13 +10,11 @@ ser = open_link()
 
 
 # --- State variables
-smooth_x = None
-smooth_y = None
-last_sent_x = 0.0
-last_sent_y = 0.0
 last_sent_time = time.monotonic()
 last_seen_time = time.monotonic()
 centered = False
+head_x = 0.0
+head_y = 0.0
 
 try:
     while True:
@@ -28,34 +26,27 @@ try:
             centered = False
             last_seen_time = now
 
-            # EMA Smoothing of target center
-            x = target.center[0]
-            y = target.center[1]
-            if smooth_x is None:
-                smooth_x, smooth_y = x, y
-            else:
-                smooth_x = ALPHA * x + (1 - ALPHA) * smooth_x
-                smooth_y = ALPHA * y + (1 - ALPHA) * smooth_y
+            x, y = target.center
+            if now - last_sent_time > MIN_INTERVAL and (abs(x) > DEAD_ZONE or abs(y) > DEAD_ZONE):
+                if abs(x) > DEAD_ZONE:
+                    head_x += K * x
+                if abs(y) > DEAD_ZONE:
+                    head_y += K * y
 
-            if now - last_sent_time > MIN_INTERVAL and (
-                abs(smooth_x - last_sent_x) > DEAD_ZONE
-                or abs(smooth_y - last_sent_y) > DEAD_ZONE
-            ):
-                send(ser, f"look {smooth_x:.2f} {smooth_y:.2f}")
+                # Clamp to [-1, 1]
+                head_x = max(-1.0, min(1.0, head_x))
+                head_y = max(-1.0, min(1.0, head_y))
+
+                send(ser, f"look {head_x:.2f} {head_y:.2f}")
                 last_sent_time = now
-                last_sent_x = smooth_x
-                last_sent_y = smooth_y
 
         # Case B: 0 target detected, back to neutral after timeout
         else:
             if now - last_seen_time > LOST_TIMEOUT and not centered:
                 send(ser, "look 0.0 0.0")
                 centered = True
-                smooth_x = None
-                smooth_y = None
+                head_x, head_y = 0.0, 0.0
                 last_sent_time = now
-                last_sent_x = 0.0
-                last_sent_y = 0.0
 
 finally:
     ser.close()

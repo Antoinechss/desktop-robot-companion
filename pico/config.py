@@ -11,6 +11,7 @@ TILT_PIN = 15
 
 # --- Servo
 SERVO_FREQ = 50
+EASE = 0.15 # fraction of remaining distance to target covered every 10ms 
 HALF_FOV = 33       # camera horizontal half-angle
 HALF_VFOV = 26      # camera vertical half-angle
 # Pan

@@ -28,7 +28,8 @@ from config import (
     TILT_CENTER, 
     TILT_MIN, 
     TILT_MAX, 
-    HALF_VFOV
+    HALF_VFOV, 
+    EASE
 )
 
 # Clock on GP18, Data on GP19
@@ -105,6 +106,8 @@ def redraw(old_rects):
     new_rects = compute_face(emotion, gaze_dx, blinking)
     return draw_face(tft, old_rects, new_rects, EMOTIONS[emotion]["background_color"])
 
+def clamp(v, lo, hi): 
+    return max(lo, min(hi, v))
 
 # ---- Main loop ----
 
@@ -117,6 +120,11 @@ next_gaze = now
 emotion = "neutral"
 blinking = False
 next_event = time.ticks_add(now, 3000)
+
+pan_current = PAN_CENTER
+pan_target = PAN_CENTER
+tilt_current = TILT_CENTER
+tilt_target = TILT_CENTER
 
 tft.fill(st7789.BLACK)
 old_rects = redraw([])  # First draw
@@ -136,9 +144,9 @@ while True:
             cmd, value = order
             if cmd == "look":
                 pan_angle, tilt_angle = value
-                set_angle(pan, pan_angle, PAN_MIN, PAN_MAX)
+                pan_target = clamp(pan_angle, PAN_MIN, PAN_MAX)
                 if tilt_angle is not None:
-                    set_angle(tilt, tilt_angle, TILT_MIN, TILT_MAX)
+                    tilt_target = clamp(tilt_angle, TILT_MIN, TILT_MAX)
                 last_look = now
                 if mode == "sleeping":
                     emotion = "neutral"
@@ -184,5 +192,13 @@ while True:
                 now, random.randint(BLINK_MIN, BLINK_MAX)
             )  # random time in 2-6 seconds
         old_rects = redraw(old_rects)
+
+
+    if abs(pan_target - pan_current) > 0.1:
+        pan_current += EASE * (pan_target - pan_current)
+        set_angle(pan, pan_current, PAN_MIN, PAN_MAX)   
+    if abs(tilt_target - tilt_current) > 0.1:
+            tilt_current += EASE * (tilt_target - tilt_current)
+            set_angle(tilt, tilt_current, TILT_MIN, TILT_MAX)   
 
     time.sleep(0.01)
