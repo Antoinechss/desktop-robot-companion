@@ -14,6 +14,7 @@ SERIAL_LINK = "/dev/ttyACM0"
 SPEED = 115200
 
 # --- Tracking (relative P-controller, camera on the head)
+TILT_ENABLED = False
 K = 0.3              # P-gain: fraction of the face offset corrected per step
 DEAD_ZONE = 0.05     # min face offset from the image centre before correcting
 MIN_INTERVAL = 0.1   # min seconds between two corrections sent to the Pico

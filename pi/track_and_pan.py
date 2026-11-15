@@ -2,7 +2,7 @@ from camera import setup_camera
 from pico_link import open_link, send
 from detection import parse_poses
 import time
-from config import LOST_TIMEOUT, MIN_INTERVAL, DEAD_ZONE, POSE_MODEL, K
+from config import LOST_TIMEOUT, MIN_INTERVAL, DEAD_ZONE, POSE_MODEL, K, TILT_ENABLED
 
 # --- Setup
 imx500, picam2, intrinsics, frame_w, frame_h = setup_camera(POSE_MODEL, "pose estimation")
@@ -37,13 +37,16 @@ try:
                 head_x = max(-1.0, min(1.0, head_x))
                 head_y = max(-1.0, min(1.0, head_y))
 
-                send(ser, f"look {head_x:.2f} {head_y:.2f}")
+                if TILT_ENABLED:
+                    send(ser, f"look {head_x:.2f} {head_y:.2f}")
+                else:
+                    send(ser, f"look {head_x:.2f}")
                 last_sent_time = now
 
         # Case B: 0 target detected, back to neutral after timeout
         else:
             if now - last_seen_time > LOST_TIMEOUT and not centered:
-                send(ser, "look 0.0 0.0")
+                send(ser, "look 0.0 0.0" if TILT_ENABLED else "look 0.0")
                 centered = True
                 head_x, head_y = 0.0, 0.0
                 last_sent_time = now
